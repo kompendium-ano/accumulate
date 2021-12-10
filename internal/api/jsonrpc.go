@@ -100,6 +100,7 @@ func (api *API) Handler() http.Handler {
 		"adi-create-prepare":           api.prepareAdiTx,
 		"token-account-create-prepare": api.prepareCreateTokenAccount,
 		"keybook-create-prepare":       api.prepareKeyBook,
+		"keypage-create-prepare":       api.prepareKeyPage,
 	}
 
 	return jsonrpc2.HTTPRequestHandler(methods, log.New(os.Stdout, "", 0))
@@ -685,7 +686,52 @@ func (api *API) prepareKeyBook(_ context.Context, params json.RawMessage) interf
 
 	//return payload
 	ret := acmeapi.APIDataResponse{}
-	ret.Type = "tokenTxPrepare"
+	ret.Type = "keybookTxPrepare"
+	msg := json.RawMessage(fmt.Sprintf("{\"payload\":\"%v\",\"log\":\"%s\", \"ss\":\"%v\", \"txhash\":\"%v\", \"nhash\":\"%v\"}", payload, "preparing data", ss, txhash, nHash))
+	ret.Data = &msg
+	return &ret
+}
+
+func (api *API) prepareKeyPage(_ context.Context, params json.RawMessage) interface{} {
+	data := &protocol.CreateSigSpec{}
+	req, payload, err := api.prepareCreate(params, data)
+
+	if err != nil {
+		return validatorError(err)
+	}
+
+	if req == nil {
+		return nil
+	}
+
+	tx := new(transactions.GenTransaction)
+	tx.Transaction = payload
+
+	tx.SigInfo = new(transactions.SignatureInfo)
+	tx.SigInfo.URL = string(req.Tx.Sponsor)
+	tx.SigInfo.Nonce = req.Tx.Signer.Nonce
+	tx.SigInfo.MSHeight = req.Tx.KeyPage.Height
+	tx.SigInfo.PriorityIdx = req.Tx.KeyPage.Index
+
+	ed := new(transactions.ED25519Sig)
+	ed.Nonce = req.Tx.Signer.Nonce
+	ed.PublicKey = req.Tx.Signer.PublicKey[:]
+	ed.Signature = req.Tx.Sig.Bytes()
+
+	tx.Signature = append(tx.Signature, ed)
+
+	ss, err := tx.SigInfo.Marshal()
+	if err != nil {
+		return nil
+	}
+
+	txhash := tx.TransactionHash()
+
+	nHash := append(common.Uint64Bytes(req.Tx.Signer.Nonce), txhash...)
+
+	//return payload
+	ret := acmeapi.APIDataResponse{}
+	ret.Type = "keypageTxPrepare"
 	msg := json.RawMessage(fmt.Sprintf("{\"payload\":\"%v\",\"log\":\"%s\", \"ss\":\"%v\", \"txhash\":\"%v\", \"nhash\":\"%v\"}", payload, "preparing data", ss, txhash, nHash))
 	ret.Data = &msg
 	return &ret
