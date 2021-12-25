@@ -16,6 +16,7 @@ import (
 	"github.com/AccumulateNetwork/accumulate/config"
 	accurl "github.com/AccumulateNetwork/accumulate/internal/url"
 	"github.com/AccumulateNetwork/accumulate/protocol"
+	"github.com/AccumulateNetwork/accumulate/smt/common"
 	"github.com/AccumulateNetwork/accumulate/types"
 	acmeapi "github.com/AccumulateNetwork/accumulate/types/api"
 	"github.com/AccumulateNetwork/accumulate/types/api/transactions"
@@ -95,6 +96,14 @@ func (api *API) Handler() http.Handler {
 
 		// credits
 		"add-credits": api.addCredits,
+
+		// prepare
+		"token-tx-prepare":             api.prepareTokenTx,
+		"adi-create-prepare":           api.prepareAdiTx,
+		"token-account-create-prepare": api.prepareCreateTokenAccount,
+		"keybook-create-prepare":       api.prepareKeyBook,
+		"keypage-create-prepare":       api.prepareKeyPage,
+		"credits-prepare":              api.prepareCredits,
 	}
 
 	return jsonrpc2.HTTPRequestHandler(methods, log.New(os.Stdout, "", 0))
@@ -537,6 +546,277 @@ func (api *API) getTokenTx(_ context.Context, params json.RawMessage) interface{
 	}
 
 	return resp
+}
+
+func (api *API) prepareTokenTx(_ context.Context, params json.RawMessage) interface{} {
+	data := &protocol.SendTokens{}
+	req, payload, err := api.prepareCreate(params, data, "From", "To")
+
+	if err != nil {
+		return validatorError(err)
+	}
+
+	if req == nil {
+		return nil
+	}
+
+	tx := new(transactions.GenTransaction)
+	tx.Transaction = payload
+
+	tx.SigInfo = new(transactions.SignatureInfo)
+	tx.SigInfo.URL = string(req.Tx.Origin)
+	tx.SigInfo.Nonce = req.Tx.Signer.Nonce
+	tx.SigInfo.KeyPageHeight = req.Tx.KeyPage.Height
+	tx.SigInfo.KeyPageIndex = req.Tx.KeyPage.Index
+
+	ed := new(transactions.ED25519Sig)
+	ed.Nonce = req.Tx.Signer.Nonce
+	ed.PublicKey = req.Tx.Signer.PublicKey[:]
+	ed.Signature = req.Tx.Sig.Bytes()
+
+	tx.Signature = append(tx.Signature, ed)
+
+	ss, err := tx.SigInfo.Marshal()
+	if err != nil {
+		return nil
+	}
+
+	txhash := tx.TransactionHash()
+
+	nHash := append(common.Uint64Bytes(req.Tx.Signer.Nonce), txhash...)
+
+	//return payload
+	ret := acmeapi.APIDataResponse{}
+	ret.Type = "tokenTxPrepare"
+	msg := json.RawMessage(fmt.Sprintf("{\"payload\":\"%v\",\"log\":\"%s\", \"ss\":\"%v\", \"txhash\":\"%v\", \"nhash\":\"%v\"}", payload, "preparing data", ss, txhash, nHash))
+	ret.Data = &msg
+	return &ret
+}
+
+// createADI creates ADI
+func (api *API) prepareAdiTx(_ context.Context, params json.RawMessage) interface{} {
+	data := &protocol.IdentityCreate{}
+	req, payload, err := api.prepareCreate(params, data)
+
+	if err != nil {
+		return validatorError(err)
+	}
+
+	if req == nil {
+		return nil
+	}
+
+	tx := new(transactions.GenTransaction)
+	tx.Transaction = payload
+
+	tx.SigInfo = new(transactions.SignatureInfo)
+	tx.SigInfo.URL = string(req.Tx.Origin)
+	tx.SigInfo.Nonce = req.Tx.Signer.Nonce
+	tx.SigInfo.KeyPageHeight = req.Tx.KeyPage.Height
+	tx.SigInfo.KeyPageIndex = req.Tx.KeyPage.Index
+
+	ed := new(transactions.ED25519Sig)
+	ed.Nonce = req.Tx.Signer.Nonce
+	ed.PublicKey = req.Tx.Signer.PublicKey[:]
+	ed.Signature = req.Tx.Sig.Bytes()
+
+	tx.Signature = append(tx.Signature, ed)
+
+	ss, err := tx.SigInfo.Marshal()
+	if err != nil {
+		return nil
+	}
+
+	txhash := tx.TransactionHash()
+
+	nHash := append(common.Uint64Bytes(req.Tx.Signer.Nonce), txhash...)
+
+	//return payload
+	ret := acmeapi.APIDataResponse{}
+	ret.Type = "tokenTxPrepare"
+	msg := json.RawMessage(fmt.Sprintf("{\"payload\":\"%v\",\"log\":\"%s\", \"ss\":\"%v\", \"txhash\":\"%v\", \"nhash\":\"%v\"}", payload, "preparing data", ss, txhash, nHash))
+	ret.Data = &msg
+	return &ret
+}
+
+func (api *API) prepareCreateTokenAccount(_ context.Context, params json.RawMessage) interface{} {
+	data := &protocol.TokenAccountCreate{}
+	req, payload, err := api.prepareCreate(params, data)
+
+	if err != nil {
+		return validatorError(err)
+	}
+
+	if req == nil {
+		return nil
+	}
+
+	tx := new(transactions.GenTransaction)
+	tx.Transaction = payload
+
+	tx.SigInfo = new(transactions.SignatureInfo)
+	tx.SigInfo.URL = string(req.Tx.Origin)
+	tx.SigInfo.Nonce = req.Tx.Signer.Nonce
+	tx.SigInfo.KeyPageHeight = req.Tx.KeyPage.Height
+	tx.SigInfo.KeyPageIndex = req.Tx.KeyPage.Index
+
+	ed := new(transactions.ED25519Sig)
+	ed.Nonce = req.Tx.Signer.Nonce
+	ed.PublicKey = req.Tx.Signer.PublicKey[:]
+	ed.Signature = req.Tx.Sig.Bytes()
+
+	tx.Signature = append(tx.Signature, ed)
+
+	ss, err := tx.SigInfo.Marshal()
+	if err != nil {
+		return nil
+	}
+
+	txhash := tx.TransactionHash()
+
+	nHash := append(common.Uint64Bytes(req.Tx.Signer.Nonce), txhash...)
+
+	//return payload
+	ret := acmeapi.APIDataResponse{}
+	ret.Type = "tokenTxPrepare"
+	msg := json.RawMessage(fmt.Sprintf("{\"payload\":\"%v\",\"log\":\"%s\", \"ss\":\"%v\", \"txhash\":\"%v\", \"nhash\":\"%v\"}", payload, "preparing data", ss, txhash, nHash))
+	ret.Data = &msg
+	return &ret
+}
+
+func (api *API) prepareKeyBook(_ context.Context, params json.RawMessage) interface{} {
+	data := &protocol.CreateKeyBook{}
+	req, payload, err := api.prepareCreate(params, data)
+
+	if err != nil {
+		return validatorError(err)
+	}
+
+	if req == nil {
+		return nil
+	}
+
+	tx := new(transactions.GenTransaction)
+	tx.Transaction = payload
+
+	tx.SigInfo = new(transactions.SignatureInfo)
+	tx.SigInfo.URL = string(req.Tx.Origin)
+	tx.SigInfo.Nonce = req.Tx.Signer.Nonce
+	tx.SigInfo.KeyPageHeight = req.Tx.KeyPage.Height
+	tx.SigInfo.KeyPageIndex = req.Tx.KeyPage.Index
+
+	ed := new(transactions.ED25519Sig)
+	ed.Nonce = req.Tx.Signer.Nonce
+	ed.PublicKey = req.Tx.Signer.PublicKey[:]
+	ed.Signature = req.Tx.Sig.Bytes()
+
+	tx.Signature = append(tx.Signature, ed)
+
+	ss, err := tx.SigInfo.Marshal()
+	if err != nil {
+		return nil
+	}
+
+	txhash := tx.TransactionHash()
+
+	nHash := append(common.Uint64Bytes(req.Tx.Signer.Nonce), txhash...)
+
+	//return payload
+	ret := acmeapi.APIDataResponse{}
+	ret.Type = "keybookTxPrepare"
+	msg := json.RawMessage(fmt.Sprintf("{\"payload\":\"%v\",\"log\":\"%s\", \"ss\":\"%v\", \"txhash\":\"%v\", \"nhash\":\"%v\"}", payload, "preparing data", ss, txhash, nHash))
+	ret.Data = &msg
+	return &ret
+}
+
+func (api *API) prepareKeyPage(_ context.Context, params json.RawMessage) interface{} {
+	data := &protocol.CreateKeyPage{}
+	req, payload, err := api.prepareCreate(params, data)
+
+	if err != nil {
+		return validatorError(err)
+	}
+
+	if req == nil {
+		return nil
+	}
+
+	tx := new(transactions.GenTransaction)
+	tx.Transaction = payload
+
+	tx.SigInfo = new(transactions.SignatureInfo)
+	tx.SigInfo.URL = string(req.Tx.Origin)
+	tx.SigInfo.Nonce = req.Tx.Signer.Nonce
+	tx.SigInfo.KeyPageHeight = req.Tx.KeyPage.Height
+	tx.SigInfo.KeyPageIndex = req.Tx.KeyPage.Index
+
+	ed := new(transactions.ED25519Sig)
+	ed.Nonce = req.Tx.Signer.Nonce
+	ed.PublicKey = req.Tx.Signer.PublicKey[:]
+	ed.Signature = req.Tx.Sig.Bytes()
+
+	tx.Signature = append(tx.Signature, ed)
+
+	ss, err := tx.SigInfo.Marshal()
+	if err != nil {
+		return nil
+	}
+
+	txhash := tx.TransactionHash()
+
+	nHash := append(common.Uint64Bytes(req.Tx.Signer.Nonce), txhash...)
+
+	//return payload
+	ret := acmeapi.APIDataResponse{}
+	ret.Type = "keypageTxPrepare"
+	msg := json.RawMessage(fmt.Sprintf("{\"payload\":\"%v\",\"log\":\"%s\", \"ss\":\"%v\", \"txhash\":\"%v\", \"nhash\":\"%v\"}", payload, "preparing data", ss, txhash, nHash))
+	ret.Data = &msg
+	return &ret
+}
+
+func (api *API) prepareCredits(_ context.Context, params json.RawMessage) interface{} {
+	data := &protocol.AddCredits{}
+	req, payload, err := api.prepareCreate(params, data)
+
+	if err != nil {
+		return validatorError(err)
+	}
+
+	if req == nil {
+		return nil
+	}
+
+	tx := new(transactions.GenTransaction)
+	tx.Transaction = payload
+
+	tx.SigInfo = new(transactions.SignatureInfo)
+	tx.SigInfo.URL = string(req.Tx.Origin)
+	tx.SigInfo.Nonce = req.Tx.Signer.Nonce
+	tx.SigInfo.KeyPageHeight = req.Tx.KeyPage.Height
+	tx.SigInfo.KeyPageIndex = req.Tx.KeyPage.Index
+
+	ed := new(transactions.ED25519Sig)
+	ed.Nonce = req.Tx.Signer.Nonce
+	ed.PublicKey = req.Tx.Signer.PublicKey[:]
+	ed.Signature = req.Tx.Sig.Bytes()
+
+	tx.Signature = append(tx.Signature, ed)
+
+	ss, err := tx.SigInfo.Marshal()
+	if err != nil {
+		return nil
+	}
+
+	txhash := tx.TransactionHash()
+
+	nHash := append(common.Uint64Bytes(req.Tx.Signer.Nonce), txhash...)
+
+	//return payload
+	ret := acmeapi.APIDataResponse{}
+	ret.Type = "creditsTxPrepare"
+	msg := json.RawMessage(fmt.Sprintf("{\"payload\":\"%v\",\"log\":\"%s\", \"ss\":\"%v\", \"txhash\":\"%v\", \"nhash\":\"%v\"}", payload, "preparing data", ss, txhash, nHash))
+	ret.Data = &msg
+	return &ret
 }
 
 // createTokenTx creates Token Tx
